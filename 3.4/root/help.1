@@ -1,0 +1,261 @@
+.TH "MONGODB-32" "1" " Container Image Pages" "SoftwareCollections.org" "July 18, 2017" 
+.nh
+.ad l
+
+
+.SH MongoDB 3.2 NoSQL Database Server Docker image
+.PP
+This repository contains Dockerfiles for MongoDB images for general usage and OpenShift.
+Users can choose between RHEL and CentOS based images.
+The RHEL image is available in the Red Hat Container Catalog
+\[la]https://access.redhat.com/containers/#/registry.access.redhat.com/rhscl/mongodb-32-rhel7\[ra]
+as registry.access.redhat.com/rhscl/mongodb\-32\-rhel7.
+The CentOS image is then available on Docker Hub
+\[la]https://hub.docker.com/r/centos/mongodb-32-centos7/\[ra]
+as centos/mongodb\-32\-centos7.
+
+.SH Description
+.PP
+This container image provides a containerized packaging of the MongoDB mongod daemon
+and client application. The mongod server daemon accepts connections from clients
+and provides access to content from MongoDB databases on behalf of the clients.
+You can find more information on the MongoDB project from the project Web site
+(
+\[la]https://www.mongodb.com/\[ra]).
+
+.SH Usage
+.PP
+For this, we will assume that you are using the \fB\fCrhscl/mongodb\-32\-rhel7\fR image.
+If you want to set only the mandatory environment variables and store the database
+in the \fB\fC/home/user/database\fR directory on the host filesystem, execute the following command:
+
+.PP
+.RS
+
+.nf
+$ docker run \-d \-e MONGODB\_USER=<user> \-e MONGODB\_PASSWORD=<password> \-e MONGODB\_DATABASE=<database> \-e MONGODB\_ADMIN\_PASSWORD=<admin\_password> \-v /home/user/database:/var/lib/mongodb/data rhscl/mongodb\-32\-rhel7
+
+.fi
+.RE
+
+.PP
+If you are initializing the database and it's the first time you are using the
+specified shared volume, the database will be created with two users: \fB\fCadmin\fR
+and \fB\fCMONGODB\_USER\fR\&. After that the MongoDB daemon will be started. If you are
+re\-attaching the volume to another container, the creation of the database
+user and admin user will be skipped, passwords of users will be changed and
+only the MongoDB daemon will be started.
+
+.SH Environment variables and volumes
+.PP
+The image recognizes the following environment variables that you can set
+during initialization by passing \fB\fC\-e VAR=VALUE\fR to the Docker run command.
+.TS
+allbox;
+Variable name  Description 
+\fB\fCMONGODB\_ADMIN\_PASSWORD\fR		Password for the admin user	
+
+.TE
+
+.PP
+Optionally you can provide settings for user with 'readWrite' role.
+(Note you MUST specify all three of these settings)
+.TS
+allbox;
+Variable name  Description 
+\fB\fCMONGODB\_USER\fR		User name for MONGODB account to be created	
+
+\fB\fCMONGODB\_PASSWORD\fR		Password for the user account	
+
+\fB\fCMONGODB\_DATABASE\fR		Database name	
+
+.TE
+
+.PP
+The following environment variables influence the MongoDB configuration file.
+They are all optional.
+.TS
+allbox;
+Variable name  Description  Default 
+\fB\fCMONGODB\_QUIET\fR		Runs MongoDB in a quiet mode that attempts to limit the amount of output.		true	
+
+.TE
+
+.PP
+You can also set the following mount points by passing the \fB\fC\-v
+/host:/container\fR flag to Docker.
+.TS
+allbox;
+Volume mount point  Description 
+\fB\fC/var/lib/mongodb/data\fR		MongoDB data directory	
+
+.TE
+
+.PP
+\fBNotice: When mounting a directory from the host into the container, ensure
+that the mounted directory has the appropriate permissions and that the owner
+and group of the directory matches the user UID or name which is running
+inside the container.\fP
+
+.SH MongoDB admin user
+.PP
+The admin user name is set to \fB\fCadmin\fR and you have to to specify the password by
+setting the \fB\fCMONGODB\_ADMIN\_PASSWORD\fR environment variable.
+
+.PP
+This user has 'dbAdminAnyDatabase', 'userAdminAnyDatabase',
+'readWriteAnyDatabase', 'clusterAdmin' roles (for more information see
+MongoDB
+reference
+\[la]https://docs.mongodb.com/manual/reference/built-in-roles/\[ra]).
+
+.SH Optional unprivileged user
+.PP
+The user with \fB\fC$MONGODB\_USER\fR name is created in database \fB\fC$MONGODB\_DATABASE\fR
+and you have to to specify the password by setting the \fB\fCMONGODB\_PASSWORD\fR
+environment variable.
+
+.PP
+This user has only 'readWrite' role in the database.
+
+.SH Changing passwords
+.PP
+Since passwords are part of the image configuration, the only supported method
+to change passwords for the database user (\fB\fCMONGODB\_USER\fR) and admin user is
+by changing the environment variables \fB\fCMONGODB\_PASSWORD\fR and
+\fB\fCMONGODB\_ADMIN\_PASSWORD\fR, respectively.
+
+.PP
+Changing database passwords directly in MongoDB will cause a mismatch between
+the values stored in the variables and the actual passwords. Whenever a
+database container starts it will reset the passwords to the values stored in
+the environment variables.
+
+.SH Extending image
+.PP
+This image can be extended using
+source\-to\-image
+\[la]https://github.com/openshift/source-to-image\[ra]\&.
+
+.PP
+For example to build customized MongoDB database image \fB\fCmy\-mongodb\-centos7\fR
+with configuration in \fB\fC\~/image\-configuration/\fR run:
+
+.PP
+.RS
+
+.nf
+$ s2i build \~/image\-configuration/ centos/mongodb\-32\-centos7 my\-mongodb\-centos7
+
+.fi
+.RE
+
+.PP
+The directory passed to \fB\fCs2i build\fR should contain one or more of the
+following directories:
+
+.ti 0
+\l'\n(.lu'
+
+.SS \fB\fCmongodb\-cfg/\fR
+.PP
+when running \fB\fCrun\-mongod\fR or \fB\fCrun\-mongod\-replication\fR commands contained
+\fB\fCmongod.conf\fR file is used for \fB\fCmongod\fR configuration
+
+.PP
+.RS
+
+.nf
+\- `envsubst` command is run on this file to still allow customization of
+  the image using environment variables
+
+\- custom configuration file does not affect name of replica set \- it has
+  to be set in `MONGODB\_REPLICA\_NAME` environment variable
+
+\- it is not possible to configure SSL using custom configuration file
+
+.fi
+.RE
+
+.SS \fB\fCmongodb\-pre\-init/\fR
+.PP
+contained shell scripts (\fB\fC*.sh\fR) are sourced before \fB\fCmongod\fR server is
+started
+
+.SS \fB\fCmongodb\-init/\fR
+.PP
+contained shell scripts (\fB\fC*.sh\fR) are sourced when \fB\fCmongod\fR server is
+started
+
+.PP
+.RS
+
+.nf
+\- `run\-mongod` command doesn't have enabled authentication in this phase
+
+\- `run\-mongod\-replication` command has enabled authentication in this phase
+
+.fi
+.RE
+
+.PP
+these scripts are skipped if \fB\fCrun\-mongod\-replication\fR is run with already
+initialized data directory
+
+.ti 0
+\l'\n(.lu'
+
+.PP
+Variables that can be used in the scripts provided to s2i:
+
+.PP
+.RS
+
+.nf
+\- `mongo\_common\_args` \-\- contains arguments for the `mongod` server (changing
+this can break existing customization scripts, e.g. default scripts)
+
+\- `$MEMBER\_ID` \-\- contains 'id' of the container. It is defined only in
+scripts for replication (`run\-mongod\-replication` command) and has different
+value for each container in a replicaset cluster. Customization scripts are
+run by all containers in replicaset \- `MEMBER\_ID` can be used to write scripts
+which are run only by some container.
+
+.fi
+.RE
+
+.PP
+During \fB\fCs2i build\fR all provided files are copied into \fB\fC/opt/app\-root/src\fR
+directory in the new image. If some configuration files are present in
+destination directory, files with the same name are overwritten. Also only one
+file with the same name can be used for customization and user provided files
+are preferred over default files in \fB\fC/usr/share/container\-scripts/mongodb/\fR\-
+so it is possible to overwrite them.
+
+.PP
+Same configuration directory structure can be used to customize the image
+every time the image is started using \fB\fCdocker run\fR\&. The directory have to be
+mounted into \fB\fC/opt/app\-root/src/\fR in the image (\fB\fC\-v
+./image\-configuration/:/opt/app\-root/src/\fR). This overwrites customization
+built into the image.
+
+.SH Troubleshooting
+.PP
+The mongod deamon in the container logs to the standard output, so the log is available in the container log. The log can be examined by running:
+
+.PP
+.RS
+
+.nf
+docker logs <container>
+
+.fi
+.RE
+
+.SH See also
+.PP
+Dockerfile and other sources for this container image are available on
+
+\[la]https://github.com/sclorg/mongodb-container\[ra]\&.
+In that repository, Dockerfile for CentOS is called Dockerfile, Dockerfile
+for RHEL is called Dockerfile.rhel7.

@@ -19,6 +19,7 @@ MongoDB versions currently provided are:
 * [MongoDB 2.6](2.6)
 * [MongoDB 3.0 (just for upgrades)](3.0)
 * [MongoDB 3.2](3.2)
+* [MongoDB 3.4](3.4)
 
 RHEL versions currently supported are:
 * RHEL7
